@@ -5,6 +5,7 @@ package ctxhelper
 import (
 	"context"
 	"sync"
+	"time"
 )
 
 // H provides context helpers for the context it was created with.
@@ -56,4 +57,25 @@ func (h *H) Cancel() {
 // Wait waits for all functions to be called on context cancellation.
 func (h *H) Wait() {
 	h.wg.Wait()
+}
+
+// Context returns the underlying context managed by H.
+func (h *H) Context() context.Context {
+	return h.ctx
+}
+
+// Close cancels and waits, making H usable as an io.Closer.
+func (h *H) Close() error {
+	h.Cancel()
+	return nil
+}
+
+// Deadline returns ctx.Deadline values.
+func (h *H) Deadline() (time.Time, bool) {
+	return h.ctx.Deadline()
+}
+
+// Done returns the done channel associated with ctx.
+func (h *H) Done() <-chan struct{} {
+	return h.ctx.Done()
 }

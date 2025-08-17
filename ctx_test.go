@@ -51,3 +51,10 @@ func TestIsDone(t *testing.T) {
 		t.Fatal("expected true when context is canceled.")
 	}
 }
+
+func TestIsNotContext(t *testing.T) {
+	h := New(context.Background())
+	if _, ok := interface{}(h).(context.Context); ok {
+		t.Fatal("H should not be a context.Context interface")
+	}
+}
