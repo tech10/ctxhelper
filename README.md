@@ -17,7 +17,7 @@ func main() {
 	h.OnDone(func() {
 		fmt.Println("Done.")
 	})
-	h.Cancel()
+	h.CancelAndWait()
 	fmt.Println("All function calls complete.")
 	// Output:
 	// Done.
