@@ -98,3 +98,20 @@ func TestIsQuit(t *testing.T) {
 		t.Fatal("expected true on IsQuit when H has been quit")
 	}
 }
+
+func TestQuitCallMultiple(t *testing.T) {
+	var wg sync.WaitGroup
+	h := New(context.Background())
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			h.Quit()
+		}()
+	}
+	wg.Wait()
+	if !h.IsQuit() {
+		t.Fatal("H should be quit on multiple calls to quit")
+	}
+	t.Log("no panic occurred")
+}
