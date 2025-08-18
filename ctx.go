@@ -1,5 +1,5 @@
 // Package ctxhelper provides helpers for executing functions
-// once a context is canceled, with proper synchronization.
+// once a context is canceled, with WaitGroup synchronization.
 package ctxhelper
 
 import (
@@ -10,9 +10,11 @@ import (
 // H provides context helper functions for the context it was created with.
 // H must be created with New.
 type H struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	wg     sync.WaitGroup
+	ctx      context.Context
+	cancel   context.CancelFunc
+	quitch   chan struct{}
+	quitonce sync.Once
+	wg       sync.WaitGroup
 }
 
 // New creates H with a child context from ctx.
@@ -21,7 +23,9 @@ func New(ctx context.Context) *H {
 	if ctx == nil {
 		panic("ctxhelper: nil context not permitted")
 	}
-	h := &H{}
+	h := &H{
+		quitch: make(chan struct{}),
+	}
 	h.ctx, h.cancel = context.WithCancel(ctx)
 	return h
 }
@@ -29,7 +33,8 @@ func New(ctx context.Context) *H {
 // OnDone waits for ctx to be canceled, then executes fn.
 // It increments the WaitGroup before waiting, and decrements it after fn finishes.
 // This can be used across multiple goroutines and called multiple times.
-// If ctx is already canceled, this will be a no op.
+// If ctx is already canceled or H is terminated via Quit,
+// this will be a no op.
 //
 // Each call to OnDone will wait for context cancellation and function execution in its own goroutine.
 // OnDone is a non-blocking call.
@@ -40,15 +45,23 @@ func New(ctx context.Context) *H {
 // but each fn is not executed in any predetermined order.
 //
 // Once OnDone is called, any functions being executed on ctx cancellation cannot be removed.
+// Before they are executed, you can quit all function termination by calling Quit.
 func (h *H) OnDone(fn func()) {
 	if h.IsDone() {
+		return
+	}
+	if h.IsQuit() {
 		return
 	}
 	h.wg.Add(1)
 	go func() {
 		defer h.wg.Done()
-		<-h.ctx.Done() // wait for cancellation
-		fn()
+		select {
+		case <-h.ctx.Done(): // wait for context cancellation
+			fn()
+		case <-h.quitch:
+			return
+		}
 	}()
 }
 
@@ -62,9 +75,27 @@ func (h *H) IsDone() bool {
 	}
 }
 
-// CancelAndWait cancels ctx and waits for any functions to complete their execution.
-func (h *H) CancelAndWait() {
-	h.Cancel()
+// IsQuit returns true if H has been quit, false if not.
+func (h *H) IsQuit() bool {
+	select {
+	case <-h.quitch:
+		return true
+	default:
+		return false
+	}
+}
+
+// Quit quits function execution.
+// This works like Cancel, but Quit will ensure the functions pending execution will not be called.
+func (h *H) Quit() {
+	h.quitonce.Do(func() {
+		close(h.quitch)
+	})
+}
+
+// QuitAndWait quits all function execution and waits for goroutine termination.
+func (h *H) QuitAndWait() {
+	h.Quit()
 	h.Wait()
 }
 
@@ -73,7 +104,13 @@ func (h *H) Cancel() {
 	h.cancel()
 }
 
-// Wait waits for all functions to complete execution on context cancellation.
+// CancelAndWait cancels ctx and waits for any functions to complete their execution.
+func (h *H) CancelAndWait() {
+	h.Cancel()
+	h.Wait()
+}
+
+// Wait waits for all functions to complete execution on context cancellation, or waits for all pending goroutines to terminate on Quit.
 func (h *H) Wait() {
 	h.wg.Wait()
 }
