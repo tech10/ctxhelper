@@ -32,11 +32,13 @@ func New(ctx context.Context) *H {
 
 // OnDone waits for ctx to be canceled, then executes fn.
 // It increments the WaitGroup before waiting, and decrements it after fn finishes.
-// This can be used across multiple goroutines and called multiple times.
-// If ctx is already canceled or H is terminated via Quit,
-// this will be a no op.
+// If Quit is called on H, fn will not be executed, but the internal WaitGroup will still be incremented and decremented as needed.
 //
-// Each call to OnDone will wait for context cancellation and function execution in its own goroutine.
+// OnDone can be used across multiple goroutines and called multiple times.
+// If ctx is already canceled or H is terminated via Quit,
+// calling OnDone will be a no op.
+//
+// Each call to OnDone will wait for context cancellation and function execution, or a call to Quit, in its own goroutine.
 // OnDone is a non-blocking call.
 //
 // fn must not panic. Any panic recovery is up to the caller of OnDone to implement.
@@ -45,7 +47,8 @@ func New(ctx context.Context) *H {
 // but each fn is not executed in any predetermined order.
 //
 // Once OnDone is called, any functions being executed on ctx cancellation cannot be removed.
-// Before they are executed, you can quit all function termination by calling Quit.
+// Before any functions are executed via context cancellation,
+// you can quit all function termination by calling Quit.
 func (h *H) OnDone(fn func()) {
 	if h.IsDone() {
 		return
@@ -124,9 +127,4 @@ func (h *H) Context() context.Context {
 func (h *H) Close() error {
 	h.CancelAndWait()
 	return nil
-}
-
-// Done returns the done channel associated with ctx.
-func (h *H) Done() <-chan struct{} {
-	return h.ctx.Done()
 }
