@@ -31,7 +31,7 @@ func TestCancel(t *testing.T) {
 		count++
 		t.Logf("called %d", count)
 	})
-	h.Cancel()
+	h.CancelAndWait()
 	mu.Lock()
 	num := count
 	mu.Unlock()

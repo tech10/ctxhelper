@@ -14,6 +14,8 @@ func Example() {
 		fmt.Println("Done.")
 	})
 	h.Cancel()
+	h.Wait()
+	// h.CancelAndWait() could be used here instead of the individual calls above.
 	fmt.Println("All function calls complete.")
 	// Output:
 	// Done.

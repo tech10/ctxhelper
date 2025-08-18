@@ -60,10 +60,15 @@ func (h *H) IsDone() bool {
 	}
 }
 
-// Cancel cancels ctx and waits for any functions to complete their execution.
-func (h *H) Cancel() {
+// CancelAndWait cancels ctx and waits for any functions to complete their execution.
+func (h *H) CancelAndWait() {
 	h.cancel()
 	h.Wait()
+}
+
+// Cancel cancels ctx but does not wait for any functions to complete their execution.
+func (h *H) Cancel() {
+	h.cancel()
 }
 
 // Wait waits for all functions to complete execution on context cancellation.
@@ -78,7 +83,7 @@ func (h *H) Context() context.Context {
 
 // Close cancels ctx and waits for function execution, making H usable as an io.Closer.
 func (h *H) Close() error {
-	h.Cancel()
+	h.CancelAndWait()
 	return nil
 }
 
