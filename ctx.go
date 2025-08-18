@@ -5,10 +5,9 @@ package ctxhelper
 import (
 	"context"
 	"sync"
-	"time"
 )
 
-// H provides context helpers for the context it was created with.
+// H provides context helper functions for the context it was created with.
 // H must be created with New.
 type H struct {
 	ctx    context.Context
@@ -16,7 +15,7 @@ type H struct {
 	wg     sync.WaitGroup
 }
 
-// New creates a new helper with the provided context and sync.WaitGroup.
+// New creates H with a child context from ctx.
 // If ctx is nil, a runtime panic will be produced.
 func New(ctx context.Context) *H {
 	if ctx == nil {
@@ -27,9 +26,22 @@ func New(ctx context.Context) *H {
 	return h
 }
 
-// OnDone waits for the context to be canceled, then executes fn.
+// OnDone waits for ctx to be canceled, then executes fn.
 // It increments the WaitGroup before waiting, and decrements it after fn finishes.
+// This can be used across multiple goroutines and called multiple times.
+// If ctx is already canceled, this will be a no op.
+//
+// Each call to OnDone will wait for context cancellation and function execution in its own goroutine.
+// OnDone is a non-blocking call.
+//
+// fn must not panic. Any panic recovery is up to the caller of OnDone to implement.
+//
+// When ctx is canceled, fn can be executed as many times as OnDone has been called,
+// but each fn is not executed in any predetermined order.
 func (h *H) OnDone(fn func()) {
+	if h.IsDone() {
+		return
+	}
 	h.wg.Add(1)
 	go func() {
 		defer h.wg.Done()
@@ -48,31 +60,26 @@ func (h *H) IsDone() bool {
 	}
 }
 
-// Cancel cancels H and waits for any functions to complete their execution.
+// Cancel cancels ctx and waits for any functions to complete their execution.
 func (h *H) Cancel() {
 	h.cancel()
 	h.Wait()
 }
 
-// Wait waits for all functions to be called on context cancellation.
+// Wait waits for all functions to complete execution on context cancellation.
 func (h *H) Wait() {
 	h.wg.Wait()
 }
 
-// Context returns the underlying context managed by H.
+// Context returns the underlying context within H.
 func (h *H) Context() context.Context {
 	return h.ctx
 }
 
-// Close cancels and waits, making H usable as an io.Closer.
+// Close cancels ctx and waits for function execution, making H usable as an io.Closer.
 func (h *H) Close() error {
 	h.Cancel()
 	return nil
-}
-
-// Deadline returns ctx.Deadline values.
-func (h *H) Deadline() (time.Time, bool) {
-	return h.ctx.Deadline()
 }
 
 // Done returns the done channel associated with ctx.
