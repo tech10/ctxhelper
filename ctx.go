@@ -13,7 +13,7 @@ type H struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
 	quitch   chan struct{}
-	quitonce sync.Once
+	quitOnce sync.Once
 	wg       sync.WaitGroup
 }
 
@@ -38,22 +38,19 @@ func New(ctx context.Context) *H {
 // If ctx is already canceled or H is terminated via Quit,
 // calling OnDone will be a no op.
 //
-// Each call to OnDone will wait for context cancellation and function execution, or a call to Quit, in its own goroutine.
+// Each call to OnDone will wait for ctx cancellation and function execution, or a call to Quit, in its own goroutine.
 // OnDone is a non-blocking call.
 //
 // fn must not panic. Any panic recovery is up to the caller of OnDone to implement.
 //
-// When ctx is canceled, fn can be executed as many times as OnDone has been called,
+// When ctx is canceled, fn will be executed as many times as OnDone has been called,
 // but each fn is not executed in any predetermined order.
 //
 // Once OnDone is called, any functions being executed on ctx cancellation cannot be removed.
 // Before any functions are executed via context cancellation,
 // you can quit all function termination by calling Quit.
 func (h *H) OnDone(fn func()) {
-	if h.IsDone() {
-		return
-	}
-	if h.IsQuit() {
+	if h.IsDone() || h.IsQuit() {
 		return
 	}
 	h.wg.Add(1)
@@ -91,7 +88,7 @@ func (h *H) IsQuit() bool {
 // Quit quits function execution.
 // This works like Cancel, but Quit will ensure the functions pending execution will not be called.
 func (h *H) Quit() {
-	h.quitonce.Do(func() {
+	h.quitOnce.Do(func() {
 		close(h.quitch)
 	})
 }
@@ -113,7 +110,7 @@ func (h *H) CancelAndWait() {
 	h.Wait()
 }
 
-// Wait waits for all functions to complete execution on context cancellation, or waits for all pending goroutines to terminate on Quit.
+// Wait waits for all functions to complete execution on ctx cancellation, or waits for all pending goroutines to terminate on Quit.
 func (h *H) Wait() {
 	h.wg.Wait()
 }
