@@ -38,6 +38,8 @@ func New(ctx context.Context) *H {
 //
 // When ctx is canceled, fn can be executed as many times as OnDone has been called,
 // but each fn is not executed in any predetermined order.
+//
+// Once OnDone is called, any functions being executed on ctx cancellation cannot be removed.
 func (h *H) OnDone(fn func()) {
 	if h.IsDone() {
 		return
@@ -62,7 +64,7 @@ func (h *H) IsDone() bool {
 
 // CancelAndWait cancels ctx and waits for any functions to complete their execution.
 func (h *H) CancelAndWait() {
-	h.cancel()
+	h.Cancel()
 	h.Wait()
 }
 
