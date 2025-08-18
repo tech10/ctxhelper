@@ -7,7 +7,7 @@ import (
 	"github.com/tech10/ctxhelper"
 )
 
-// Example provides a full example on using H.
+// Example provides a full example for the most common pattern using H.
 func Example() {
 	h := ctxhelper.New(context.Background())
 	h.OnDone(func() {
@@ -22,8 +22,7 @@ func Example() {
 	// All function calls complete.
 }
 
-// ExampleH_IsDone checks to see if the context is canceled.
-// Returns true if so, false if not.
+// ExampleH_IsDone demonstrates IsDone to check context cancellation.
 func ExampleH_IsDone() {
 	ctx, cancel := context.WithCancel(context.Background())
 	h := ctxhelper.New(ctx)
@@ -35,8 +34,8 @@ func ExampleH_IsDone() {
 	// Done: true
 }
 
-// ExampleH_IsQuit checks to see if function execution is terminated.
-// Returns true if so, false if not.
+// ExampleH_IsQuit demonstrates IsQuit to check if H has been quit.
+// A call to Quit will prevent function execution and terminate the waiting goroutines.
 func ExampleH_IsQuit() {
 	h := ctxhelper.New(context.Background())
 	h.OnDone(func() {
@@ -44,6 +43,7 @@ func ExampleH_IsQuit() {
 	})
 	fmt.Println("Quit:", h.IsQuit())
 	h.QuitAndWait()
+	// h.Quit() then h.Wait() could also be called here.
 	fmt.Println("Quit:", h.IsQuit())
 	// Output:
 	// Quit: false
