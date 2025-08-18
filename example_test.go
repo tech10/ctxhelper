@@ -34,3 +34,18 @@ func ExampleH_IsDone() {
 	// Done: false
 	// Done: true
 }
+
+// ExampleH_IsQuit checks to see if function execution is terminated.
+// Returns true if so, false if not.
+func ExampleH_IsQuit() {
+	h := ctxhelper.New(context.Background())
+	h.OnDone(func() {
+		fmt.Println("This function should never be executed.")
+	})
+	fmt.Println("Quit:", h.IsQuit())
+	h.QuitAndWait()
+	fmt.Println("Quit:", h.IsQuit())
+	// Output:
+	// Quit: false
+	// Quit: true
+}
