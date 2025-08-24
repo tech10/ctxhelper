@@ -7,6 +7,10 @@ import (
 	"sync"
 )
 
+// CancelFunc is a convenience wrapper for func() type.
+// Any CancelFunc type should only execute its operations once, no matter how often it's called.
+type CancelFunc func()
+
 // H provides context helper functions for the context it was created with.
 // H must be created with New.
 type H struct {
@@ -65,10 +69,10 @@ func (h *H) OnDone(fn func()) {
 	}()
 }
 
-// OnDoneWithCancel returns context.CancelFunc for canceling this specific goroutine without effecting any of the others.
+// OnDoneWithCancel returns CancelFunc for canceling this specific goroutine without effecting any of the others.
 // It is exactly like OnDone in its operation otherwise.
 // The returned CancelFunc is safe to call from multiple goroutines or multiple times.
-func (h *H) OnDoneWithCancel(fn func()) context.CancelFunc {
+func (h *H) OnDoneWithCancel(fn func()) CancelFunc {
 	if h.IsDone() || h.IsQuit() {
 		return func() {}
 	}
