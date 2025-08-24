@@ -49,3 +49,23 @@ func ExampleH_IsQuit() {
 	// Quit: false
 	// Quit: true
 }
+
+// ExampleH_OnDoneWithCancel provides an example using OnDoneWithCancel
+// to cancel an individual function from executing when a context is canceled.
+func ExampleH_OnDoneWithCancel() {
+	h := ctxhelper.New(context.Background())
+	h.OnDone(func() {
+		fmt.Println("Done.") // this will be called when the context is canceled
+	})
+	cancel := h.OnDoneWithCancel(func() {
+		fmt.Println("This should never be printed.")
+	})
+	// cancel the second function individually
+	cancel()
+	// run all other functions upon context cancelation and wait for execution
+	h.CancelAndWait()
+	fmt.Println("All function calls complete.")
+	// Output:
+	// Done.
+	// All function calls complete.
+}

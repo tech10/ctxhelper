@@ -54,6 +54,10 @@ func main() {
 }
 ```
 
+# OnDoneWithCancel
+
+This operates exactly as OnDone does in the example above, but it will return a context.CancelFunc for individually canceling that specific goroutine. This will result in that specific function not executing when the context is canceled. See package documentation for a full example of how this works.
+
 # Future additions
 
 There may be other helper functions added in the future, though they will not all be documented here. See the [docs for this package](https://pkg.go.dev/github.com/tech10/ctxhelper) for full documentation.

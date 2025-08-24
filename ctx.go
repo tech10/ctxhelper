@@ -65,6 +65,44 @@ func (h *H) OnDone(fn func()) {
 	}()
 }
 
+// OnDoneWithCancel returns context.CancelFunc for canceling this specific goroutine without effecting any of the others.
+// It is exactly like OnDone in its operation otherwise.
+// The returned CancelFunc is safe to call from multiple goroutines or multiple times.
+func (h *H) OnDoneWithCancel(fn func()) context.CancelFunc {
+	if h.IsDone() || h.IsQuit() {
+		return func() {}
+	}
+
+	donech := make(chan struct{})
+
+	h.wg.Add(1)
+	go func() {
+		defer h.wg.Done()
+		select {
+		case <-h.ctx.Done(): // wait for context cancellation
+			select { // check to see if fn was canceled individually
+			case <-donech: // individual fn run canceled
+				return
+			default: // context canceled
+				fn()
+			}
+		case <-h.quitch: // global quit
+			return
+		case <-donech: // canceled before ctx.Done fired
+			return
+		}
+	}()
+
+	// Ensure this function will only be executed once,
+	// even across multiple goroutines.
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			close(donech)
+		})
+	}
+}
+
 // IsDone returns true if the context has been canceled, false if not.
 func (h *H) IsDone() bool {
 	select {

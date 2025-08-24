@@ -76,6 +76,34 @@ func TestQuit(t *testing.T) {
 	}
 }
 
+func TestOnDoneWithCancel(t *testing.T) {
+	var mu sync.Mutex
+	count := 0
+	h := New(context.Background())
+	cancel := h.OnDoneWithCancel(func() {
+		mu.Lock()
+		defer mu.Unlock()
+		count++
+		t.Logf("called %d", count)
+	})
+	cancel()
+	h.Wait()
+	mu.Lock()
+	num := count
+	mu.Unlock()
+	if num != 0 {
+		t.Fatalf("expected 0, got %d", num)
+	}
+
+	if h.IsDone() {
+		t.Fatal("expected no context cancellation on individual function cancellation")
+	}
+
+	if h.IsQuit() {
+		t.Fatal("expected no quit on individual function cancellation")
+	}
+}
+
 func TestIsDone(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	h := New(ctx)
